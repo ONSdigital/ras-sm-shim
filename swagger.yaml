@@ -1,0 +1,375 @@
+definitions:
+  Archive:
+    properties:
+      id: {example: 4d5818b3-ecfa-41b3-bf31-4cbe396d327b, type: string}
+      messages:
+        items: {$ref: '#/definitions/MessageReceive'}
+        type: array
+    required: [id, messages]
+    type: object
+  Draft:
+    properties:
+      id: {example: 212faf46-931f-4170-9b96-949e20724343, format: urn, type: string}
+      status: {example: saved, type: string}
+    type: object
+  Labels:
+    example:
+      addLabels: [INBOX, UNREAD]
+      removeLabels: [USER1]
+    properties:
+      addLabelIds:
+        items: {type: string}
+        type: array
+      removeLabelIds:
+        items: {type: string}
+        type: array
+    type: object
+  MessageBody:
+    properties:
+      body: {format: byte, type: string}
+      case: {example: 'urn:ons.gov.uk:id:case:001.234.56789', type: string}
+      collection: {example: 'urn:ons.gov.uk:id:collection:001.234.56789', type: string}
+      msg_from:
+        properties:
+          emailAdress: {example: tejas.patel@ons.gov.uk, format: email, type: string}
+          firstName: {example: Tejas, type: string}
+          id: {example: 'urn:ons.gov.uk:id:ons:001.456.78903', format: urn, type: string}
+          lastName: {example: Patel, type: string}
+        required: [id]
+        type: object
+      msg_to:
+        properties:
+          emailAddress: {example: richard.weeks@ons.gov.uk, format: email, type: string}
+          firstName: {example: Richard, type: string}
+          id: {example: 'urn:ons.gov.uk:id:respondent:001.234.56789', format: urn,
+            type: string}
+          lastName: {example: Weeks, type: string}
+        required: [id]
+        type: object
+      ru: {example: 'urn:ons.gov.uk:id:business:001.234.56789', type: string}
+      subject: {example: Survey enquiry, type: string}
+      survey: {example: 'urn:ons.gov.uk:id:survey:001.234.56789', type: string}
+      threadId: {description: Thread identifier (UUID), example: 212faf46-931f-4170-9b96-949e20722126,
+        type: string}
+    required: [threadId, msg_to, msg_from, body, ru, survey]
+    type: object
+  MessageReceive:
+    allOf:
+    - {$ref: '#/definitions/MessageBody'}
+    - properties:
+        links: {type: string}
+  MessageSend:
+    allOf:
+    - {$ref: '#/definitions/MessageBody'}
+  Sent:
+    properties:
+      id: {example: 212faf46-931f-4170-9b96-949e20724343, format: urn, type: string}
+      status: {example: sent, type: string}
+    type: object
+  Thread:
+    properties:
+      id: {example: 73685db6-9c76-44ea-a4e9-2cfb1f1eacf8, type: string}
+      messages:
+        items: {$ref: '#/definitions/MessageReceive'}
+        type: array
+    required: [id, messages]
+    type: object
+host: localhost:8080
+info:
+  contact: {email: richard.weeks@ons.gov.uk, name: Richard Weeks, url: 'https://github.com/ONSdigital/ras-secure-message'}
+  description: This is the RAS Secure Message API
+  license: {name: Apache 2.0, url: 'http://www.apache.org/licenses/LICENSE-2.0.html'}
+  title: Secure Message API
+  version: 1.0.1
+paths:
+  /archive/{id}:
+    get:
+      description: Returns details of a secure message archive
+      operationId: getArchive
+      parameters:
+      - {description: Archive ID, in: path, name: id, required: true, type: string}
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Message ID's in this archive
+          schema:
+            items: {example: 98284e51-2e9d-4849-8e3b-ebb4bd48cc18, format: int64,
+              type: integer}
+            type: array
+      summary: Return details of an archive
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /archives:
+    get:
+      description: Returns a list of archives
+      operationId: getArchives
+      parameters:
+      - {description: Survey name, in: query, name: survey, required: false, type: string}
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Archives
+          schema:
+            items: {$ref: '#/definitions/Archive'}
+            type: array
+        400: {description: Bad syntax}
+        403: {description: Forbidden}
+      summary: Returns a list of archives
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /draft/save:
+    post:
+      consumes: [application/vnd.collection+json]
+      description: Save a draft message
+      operationId: saveDraft
+      parameters:
+      - description: Message to send
+        in: body
+        name: Message
+        schema: {$ref: '#/definitions/MessageSend'}
+      produces: [application/vnd.collection+json]
+      responses:
+        201:
+          description: Draft message saved.
+          headers:
+            ETag: {description: 'On successful creation, the new ETag for the Draft
+                will be included as a header, e.g. "5635635636356356"', type: string}
+          schema: {$ref: '#/definitions/Draft'}
+        400: {description: Invalid draft message}
+      summary: Save a draft message
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /draft/{id}:
+    delete:
+      description: Delete a draft message.
+      operationId: deleteDraft
+      parameters:
+      - {description: Message ID, format: int64, in: path, name: id, required: true,
+        type: integer}
+      responses:
+        200: {description: Message deleted.}
+        400: {description: Invalid request.}
+        403: {description: Forbidden.}
+      summary: Delete a draft message
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+    get:
+      description: Get a draft message by ID
+      operationId: getDraft
+      parameters:
+      - {description: Message ID, in: path, name: id, required: true, type: string}
+      responses:
+        200: {description: Get draft message}
+      summary: Get a draft message by ID
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /draft/{id}/modify:
+    put:
+      consumes: [application/vnd.collection+json]
+      description: Update a draft message
+      operationId: updateDrafts
+      parameters:
+      - {description: Message ID, format: int64, in: path, name: id, required: true,
+        type: integer}
+      - description: Message to update draft
+        in: body
+        name: Message
+        schema: {$ref: '#/definitions/MessageSend'}
+      produces: [application/vnd.collection+json]
+      responses:
+        200: {description: Update draft message}
+        400: {description: Invalid request}
+      summary: Update a draft message
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /drafts:
+    get:
+      description: Returns a list of draft messages
+      operationId: getDrafts
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Draft messages
+          examples:
+            application/vnd.collection+json: {body: Draft messages, msg_from: respondent@abcdef.com,
+              msg_to: richard.weeks@ons.gov.uk}
+          schema:
+            items: {$ref: '#/definitions/MessageReceive'}
+            type: array
+        400: {description: Bad syntax}
+        403: {description: Forbidden}
+      summary: Returns a list of draft messages
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /message/send:
+    post:
+      consumes: [application/vnd.collection+json]
+      description: Sends a secure message
+      operationId: sendMessage
+      parameters:
+      - description: Message to send
+        in: body
+        name: Message
+        schema: {$ref: '#/definitions/MessageSend'}
+      produces: [application/vnd.collection+json]
+      responses:
+        201:
+          description: Message sent.
+          schema: {$ref: '#/definitions/Sent'}
+        400: {description: Bad syntax.}
+        403: {description: Forbidden.}
+        405: {description: Method not allowed.}
+      summary: Sends a secure message
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /message/{id}:
+    delete:
+      description: Delete a message.
+      operationId: deleteMessage
+      parameters:
+      - {description: Message ID, format: int64, in: path, name: id, required: true,
+        type: integer}
+      responses:
+        200: {description: Message deleted.}
+        400: {description: Invalid request.}
+        403: {description: Forbidden.}
+      summary: Delete a sent message
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+    get:
+      description: Fetch message by id
+      operationId: getMessage
+      parameters:
+      - {description: Message ID, in: path, name: id, required: true, type: string}
+      - {description: Reporting Unit, in: query, name: reportingUnit, required: false,
+        type: string}
+      - {description: Survey name, in: query, name: survey, required: false, type: string}
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Returns message by id
+          schema:
+            items: {$ref: '#/definitions/MessageReceive'}
+            type: array
+        400: {description: Bad syntax}
+        403: {description: Forbidden}
+        404: {description: Message not found}
+      summary: Fetch message by id
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /message/{id}/modify:
+    put:
+      description: Update message status by id
+      operationId: updateMessage
+      parameters:
+      - {description: Message ID, in: path, name: id, required: true, type: string}
+      - description: Message to update labels
+        in: body
+        name: labels
+        schema: {$ref: '#/definitions/Labels'}
+      produces: [application/vnd.collection+json]
+      responses:
+        200: {description: Updated message labels by id}
+        403: {description: Forbidden}
+        404: {description: Message not found}
+      summary: Update message status by id
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /messages:
+    get:
+      description: returns list of secure messages
+      operationId: getMessages
+      parameters:
+      - {description: Limit number of messages returned, format: int32, in: query,
+        name: limit, required: false, type: integer}
+      - {description: Messages page number, format: int32, in: query, name: page,
+        type: integer}
+      - {description: Reporting Unit, in: query, name: ru, required: false, type: string}
+      - {description: Survey name, in: query, name: survey, required: false, type: string}
+      - {description: Collection Exercise, in: query, name: collection, required: false,
+        type: string}
+      - {description: Case ID, in: query, name: case, required: false, type: string}
+      - {description: Returns messages that match all of the specified labels, in: query,
+        name: labels, required: false, type: string}
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Message results matching criteria
+          examples:
+            application/vnd.collection+json:
+              _links:
+                first: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/messages'}
+                next: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/messages?page=4&limit=10'}
+                prev: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/messages?page=2&limit=10'}
+                self: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/messages?page=3&limit=10'}
+              messages:
+                message1:
+                  _links:
+                    self: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/message/1'}
+                  body: Message 1
+                  id: 1
+                  msg_from: {firstName: Andrew, id: 'urn:ons.gov.uk:id:ons:001.234.56789',
+                    lastName: Torrance}
+                  msg_to: {firstName: Richard, id: 'urn:ons.gov.uk:id:respondent:001.234.56789',
+                    lastName: Weeks}
+                  subject: Survey enquiry
+                  threadId: 1
+                message2:
+                  _links:
+                    self: {href: 'https://virtserver.swaggerhub.com/rjweeks/securemessage/1.0.0/message/2'}
+                  body: Message 2
+                  id: 2
+                  msg_from: {firstName: Andrew, id: 'urn:ons.gov.uk:id:respondent:001.234.56789',
+                    lastName: Torrance}
+                  msg_to: {firstNamne: Richard, id: 'urn:ons.gov.uk:id:ons:001.234.56789',
+                    lastName: Weeks}
+                  subject: Survey results
+                  threadId: 2
+          schema:
+            items: {$ref: '#/definitions/MessageReceive'}
+            type: array
+        400: {description: Bad syntax}
+        403: {description: Forbidden}
+      summary: Fetches a list of users secure messages
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /thread/{id}:
+    get:
+      description: Returns a thread
+      operationId: getThread
+      parameters:
+      - {description: Thread ID, in: path, name: id, required: true, type: string}
+      produces: [application/vnd.collection+json]
+      responses:
+        200:
+          description: Thread
+          schema:
+            items: {$ref: '#/definitions/Thread'}
+            type: array
+        400: {description: Bad syntax}
+        403: {description: Forbidden}
+      summary: Returns a thread
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+  /threads:
+    get:
+      description: Return a list of Threads IDs for an RU
+      operationId: getThreadsForRU
+      parameters:
+      - {description: Reporting Unit, in: query, name: ru, required: true, type: string}
+      - {description: Survey name, in: query, name: survey, required: false, type: string}
+      responses:
+        200:
+          description: Thread IDs
+          schema:
+            items: {example: 98284e51-2e9d-4849-8e3b-ebb4bd48cc18, format: int64,
+              type: integer}
+            type: array
+      summary: Return a list of threads for an RU and Survey
+      tags: [Respondents]
+      x-swagger-router-controller: controllers.respondents
+schemes: [https]
+swagger: '2.0'
+tags:
+- {description: Respond to surveys on behalf of a Reporting Unit, name: Respondents}
+- {description: ONS staff supporting surveys, name: Respondent Liason}
