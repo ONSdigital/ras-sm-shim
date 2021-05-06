@@ -12,7 +12,7 @@ constantly==15.1.0
 cryptography==1.9
 ecdsa==0.13
 Flask==0.12.2
-Flask-Cors==3.0.2
+Flask-Cors==3.0.9
 Flask-Twisted==0.1.2
 future==0.16.0
 hyperlink==17.1.1
